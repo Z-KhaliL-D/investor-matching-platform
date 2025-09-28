@@ -2,4 +2,5 @@ flask
 flask-cors
 qdrant-client
 sentence-transformers
+pandas
 requests
