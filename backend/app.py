@@ -57,12 +57,14 @@ def match_startup():
     matches = []
     for r in results:
         payload = r.payload
+
+        # Handle both CSV (lowercase keys) and Excel (capitalized keys)
         matches.append({
-            "name": payload.get("name", ""),
-            "type": payload.get("type", ""),
-            "focus": payload.get("investmentFocus", ""),
-            "location": payload.get("location", payload.get("country", "")),
-            "description": payload.get("description", ""),
+            "name": payload.get("name") or payload.get("Name", ""),
+            "type": payload.get("type") or payload.get("Type", ""),
+            "focus": payload.get("investmentFocus") or payload.get("Investment Focus", ""),
+            "location": payload.get("location") or payload.get("Adress") or payload.get("Country", ""),
+            "description": payload.get("description") or payload.get("Description", ""),
             "score": float(r.score),
         })
 
