@@ -12,43 +12,53 @@ COLLECTION_NAME = "investors"
 # === Connect ===
 qdrant = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
 
-# === Load your model ===
-model = SentenceTransformer("./tsdae_finetuned_investors")  # or MiniLM if you prefer
+# === Load your fine-tuned model ===
+model = SentenceTransformer("./tsdae_finetuned_investors")  # or fallback to MiniLM
 
-# === Load CSV ===
-df = pd.read_csv("investors_data (1).csv").drop_duplicates(subset=["name"], keep="first")
+# === Load Excel ===
+df = pd.read_excel("DATABASE STRUCTURE.xlsx", sheet_name="Feuille 1")
+df = df.drop_duplicates(subset=["Name"], keep="first")
 
+# === Build profile text ===
 def build_profile_text(row):
     parts = []
-    if pd.notna(row.get("description")):
-        parts.append(str(row["description"]))
-    if pd.notna(row.get("investmentFocus")):
-        parts.append("Focus areas: " + str(row["investmentFocus"]))
-    if pd.notna(row.get("category")):
-        parts.append("Category: " + str(row["category"]))
-    if pd.notna(row.get("type")):
-        parts.append("Type: " + str(row["type"]))
-    if pd.notna(row.get("location")):
-        parts.append("Location: " + str(row["location"]))
-    elif pd.notna(row.get("country")):
-        parts.append("Country: " + str(row["country"]))
-    if pd.notna(row.get("portfolioHighlights")):
-        parts.append("Portfolio: " + str(row["portfolioHighlights"]))
+    if pd.notna(row.get("Description")):
+        parts.append(str(row["Description"]))
+    if pd.notna(row.get("Investment Focus")):
+        parts.append("Focus areas: " + str(row["Investment Focus"]))
+    if pd.notna(row.get("Stage Focus")):
+        parts.append("Stage focus: " + str(row["Stage Focus"]))
+    if pd.notna(row.get("Type")):
+        parts.append("Type: " + str(row["Type"]))
+    if pd.notna(row.get("Adress")):
+        parts.append("Address: " + str(row["Adress"]))
+    if pd.notna(row.get("Country")):
+        parts.append("Country: " + str(row["Country"]))
+    if pd.notna(row.get("Target Countries ")):
+        parts.append("Target countries: " + str(row["Target Countries "]))
+    if pd.notna(row.get("Portfolio highlights")):
+        parts.append("Portfolio: " + str(row["Portfolio highlights"]))
+    if pd.notna(row.get("Founders")):
+        parts.append("Founders: " + str(row["Founders"]))
     return ". ".join(parts)
 
 df["profile_text"] = df.apply(build_profile_text, axis=1)
 
+# === Prepare texts ===
 texts = df["profile_text"].dropna().astype(str).tolist()
-print(f"✅ Loaded {len(texts)} investor profiles.")
+print(f"✅ Loaded {len(texts)} investor profiles from Excel.")
 
 # === Create collection (if not exists) ===
 if not qdrant.collection_exists(COLLECTION_NAME):
     qdrant.create_collection(
         collection_name=COLLECTION_NAME,
-        vectors_config=VectorParams(size=model.get_sentence_embedding_dimension(), distance=Distance.COSINE),
+        vectors_config=VectorParams(
+            size=model.get_sentence_embedding_dimension(),
+            distance=Distance.COSINE
+        ),
     )
 
-# === Encode ===
+# === Encode profiles ===
 embeddings = model.encode(texts, show_progress_bar=True, convert_to_numpy=True)
 
 # === Upload in batches ===
