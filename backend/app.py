@@ -41,34 +41,14 @@ def run_phi(prompt: str) -> str:
 # === Route: Match startup to investors ===
 @app.route("/match", methods=["POST"])
 def match_startup():
-    data = request.get_json()
-    startup_desc = data.get("description")
-    if not startup_desc:
-        return jsonify({"error": "Missing description"}), 400
-
-    query_vector = model.encode(startup_desc).tolist()
-
-    results = qdrant.search(
-        collection_name=COLLECTION_NAME,
-        query_vector=query_vector,
-        limit=10,
-    )
-
-    matches = []
-    for r in results:
-        payload = r.payload
-
-        # Handle both CSV (lowercase keys) and Excel (capitalized keys)
-        matches.append({
-            "name": payload.get("name") or payload.get("Name", ""),
-            "type": payload.get("type") or payload.get("Type", ""),
-            "focus": payload.get("investmentFocus") or payload.get("Investment Focus", ""),
-            "location": payload.get("location") or payload.get("Adress") or payload.get("Country", ""),
-            "description": payload.get("description") or payload.get("Description", ""),
-            "score": float(r.score),
-        })
-
-    return jsonify(matches)
+    """
+    🚧 TODO: Matching logic to be implemented here.
+    - Parse request (profile + description)
+    - Encode with model
+    - Query Qdrant
+    - Return top matches
+    """
+    return jsonify({"message": "⚠️ Matching logic not implemented yet."}), 501
 
 
 # === Route: Chat with Phi-2 ===
@@ -86,4 +66,4 @@ def chat_agent():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, use_reloader=False)
