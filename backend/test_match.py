@@ -22,6 +22,7 @@ if response.status_code == 200:
     print("Top Matches: \n")
     for match in data.get("matches", []):
         print(f"ID: {match['id']}")
+        print(f"Name: {match['name']}")
         print(f"Score: {match['score']:.4f}")
         print(f"Profile Text: {match['profile_text']}")
         print(f"Investment Focus: {match['Investment_Focus']}")
