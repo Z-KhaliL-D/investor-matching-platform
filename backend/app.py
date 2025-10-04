@@ -48,7 +48,46 @@ def match_startup():
     - Query Qdrant
     - Return top matches
     """
-    return jsonify({"message": "⚠️ Matching logic not implemented yet."}), 501
+    try:
+        # === Parse input ===
+        data = request.get_json()
+        description = data.get("description", "")
+        industry = data.get("industry", "")
+        stage = data.get("stage", "")
+        Target_country = data.get("country", "")
+
+        # === Build profile text ===
+        profile_text = f"{description}. Industry: {industry}. Stage: {stage}. Country: {Target_country}"
+
+        # === Encode startup profile into vector ===
+        query_vector = model.encode(profile_text).tolist()
+
+        # === Search in Qdrant ===
+        results = qdrant.search(
+            collection_name = COLLECTION_NAME,
+            query_vector = query_vector,
+            limit = 5,  
+            with_payload = True
+        )
+
+        # === Format results ===
+        matches = []
+        for r in results:
+            matches.append({
+                "id": r.id,
+                "score": r.score,
+                "profile_text": r.payload.get("profile_text", ""),
+                "Investment_Focus": r.payload.get("Investment_Focus", ""),
+                "Stage_Focus": r.payload.get("Stage_Focus", ""),
+                "Target_Countries": r.payload.get("Target_Countries_Mapped", "")
+            })
+
+        return jsonify({"profile text": profile_text, "matches": matches})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    #return jsonify({"message": "⚠️ Matching logic not implemented yet."}), 501
 
 
 # === Route: Chat with Phi-2 ===
