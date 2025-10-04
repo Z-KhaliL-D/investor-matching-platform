@@ -75,6 +75,7 @@ def match_startup():
         for r in results:
             matches.append({
                 "id": r.id,
+                "name": r.payload.get("Name", "Unknown"),
                 "score": r.score,
                 "profile_text": r.payload.get("profile_text", ""),
                 "Investment_Focus": r.payload.get("Investment_Focus", ""),
@@ -106,3 +107,4 @@ def chat_agent():
 
 if __name__ == '__main__':
     app.run(debug=True, use_reloader=False)
+
