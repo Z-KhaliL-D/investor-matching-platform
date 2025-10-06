@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
+from llama_client import query_llama
 import requests
 
 app = Flask(__name__)
@@ -91,20 +92,20 @@ def match_startup():
     #return jsonify({"message": "⚠️ Matching logic not implemented yet."}), 501
 
 
-# === Route: Chat with Phi-2 ===
-@app.route("/chat", methods=["POST"])
-def chat_agent():
+# === Route: Chat with LLama ===
+@app.route("/query-llama", methods=["POST"])
+def query_llama_api():
     data = request.get_json()
-    user_msg = data.get("message")
-    if not user_msg:
-        return jsonify({"error": "Missing message"}), 400
+    prompt = data.get("prompt", "")
+    if not prompt:
+        return jsonify({"error": "Prompt is required"}), 400
 
-    prompt = f"You are Phi-2. Answer concisely.\nUser: {user_msg}\nAssistant:"
-    answer = run_phi(prompt)
-
-    return jsonify({"answer": answer})
+    try:
+        response = query_llama(prompt)
+        return jsonify({"response": response})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == '__main__':
     app.run(debug=True, use_reloader=False)
-
