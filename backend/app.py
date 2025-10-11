@@ -11,7 +11,8 @@ CORS(app)
 # === Config ===
 QDRANT_URL = "https://ed07d684-8e1d-499f-a564-a3a6ce5d6280.eu-central-1-0.aws.cloud.qdrant.io"
 QDRANT_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.wQmL1PrTpbytO3tzurKM56jWG9bUMFFscUQierUlkX8"
-COLLECTION_NAME = "investors"
+#COLLECTION_NAME = "investors"
+
 
 # === Connect to Qdrant ===
 qdrant = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
@@ -40,8 +41,8 @@ def run_phi(prompt: str) -> str:
 
 
 # === Route: Match startup to investors ===
-@app.route("/match", methods=["POST"])
-def match_startup():
+@app.route("/match/<collection_name>", methods=["POST"])
+def match_startup(collection_name):
     """
     🚧 TODO: Matching logic to be implemented here.
     - Parse request (profile + description)
@@ -65,7 +66,7 @@ def match_startup():
 
         # === Search in Qdrant ===
         results = qdrant.search(
-            collection_name = COLLECTION_NAME,
+            collection_name = collection_name,
             query_vector = query_vector,
             limit = 5,  
             with_payload = True
@@ -73,23 +74,51 @@ def match_startup():
 
         # === Format results ===
         matches = []
-        for r in results:
-            matches.append({
-                "id": r.id,
-                "name": r.payload.get("Name", "Unknown"),
-                "score": r.score,
-                "profile_text": r.payload.get("profile_text", ""),
-                "Investment_Focus": r.payload.get("Investment_Focus", ""),
-                "Stage_Focus": r.payload.get("Stage_Focus", ""),
-                "Target_Countries": r.payload.get("Target_Countries_Mapped", "")
-            })
-
-        return jsonify({"profile text": profile_text, "matches": matches})
+        if collection_name == "investors":
+            for r in results:
+                matches.append({
+                    "id": r.id,
+                    "name": r.payload.get("Name", "Unknown"),
+                    "score": r.score,
+                    "profile_text": r.payload.get("profile_text", ""),
+                    "Type": r.payload.get("Type",""),
+                    "Investment_Focus": r.payload.get("Investment_Focus", ""),
+                    "Stage_Focus": r.payload.get("Stage_Focus", ""),
+                    "Target_Countries": r.payload.get("Target_Countries_Mapped", ""),
+                    "Contact_Email": r.payload.get("Contact_Email",""),
+                    "Phone_Number":r.payload.get("Phone_Number",""),
+                    "Social_Links": {
+                        "Website": r.payload.get("Website", ""),
+                        "LinkedIn": r.payload.get("LinkedIn", ""),
+                        "Other_social_Links": r.payload.get("Other_social_Links", "")
+                    }
+                }
+                )
+            return jsonify({"profile text": profile_text, "matches": matches})
+        elif collection_name == "accelerators": 
+            for r in results:
+                matches.append({
+                    "id": r.id,
+                    "name": r.payload.get("name", "Unknown"),
+                    "score": r.score,
+                    "profile_text": r.payload.get("profile_text", ""),
+                    "Investment_Focus": r.payload.get("Industries", ""),
+                    "Stage_Focus": r.payload.get("Investment_Stage", ""),
+                    "Location": r.payload.get("Location", ""),
+                    "Contact_Email": r.payload.get("Contact_Email",""),
+                    "Phone_Number":r.payload.get("Phone_Number",""),
+                    "Social_Links": {
+                        "Website": r.payload.get("Website", ""),
+                        "LinkedIn": r.payload.get("LinkedIn", ""),
+                        "Facebook": r.payload.get("Facebook", "")
+                    }
+                })
+            return jsonify({"profile text": profile_text, "matches": matches})
+        else :
+            return jsonify({"The Qdrant empty!"})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-    #return jsonify({"message": "⚠️ Matching logic not implemented yet."}), 501
 
 
 # === Route: Chat with LLama ===
@@ -97,12 +126,19 @@ def match_startup():
 def query_llama_api():
     data = request.get_json()
     prompt = data.get("prompt", "")
+    collection_name = data.get("collection_name", "investors")  # investors or accelerators
+    
     if not prompt:
         return jsonify({"error": "Prompt is required"}), 400
 
     try:
-        response = query_llama(prompt)
-        return jsonify({"response": response})
+        match_data = match_startup(collection_name).get_json()          
+        top_matches = match_data.get("matches", [])
+
+        response_text = query_llama(prompt, top_matches)
+
+        return jsonify({"response": response_text})
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

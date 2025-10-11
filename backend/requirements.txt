@@ -4,3 +4,6 @@ qdrant-client
 sentence-transformers
 pandas
 requests
+groq
+dotenv
+tavily-python
